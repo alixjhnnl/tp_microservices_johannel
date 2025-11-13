@@ -44,11 +44,21 @@ def verify_jwt(token: str):
     if user.auth_token != token:
         return None
 
-    # date d'expiration en base
-    if not user.token_expires_at or user.token_expires_at < datetime.now(timezone.utc):
+    # pas de date d'expiration en base → invalide
+    if not user.token_expires_at:
+        return None
+
+    # Normalisation : on rend la date "aware" si elle est naive
+    expires = user.token_expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+
+    # Comparaison avec l'heure actuelle (aware elle aussi)
+    if expires < datetime.now(timezone.utc):
         return None
 
     return payload
+
     
 # --- transport token ---
 def jwt_required(f):

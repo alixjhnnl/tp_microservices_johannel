@@ -1,11 +1,7 @@
 from app import app, db
-from app.models import User  # On importe juste pour que SQLAlchemy voie le modèle
+from app.models import User
 
 with app.app_context():
-    print("🔧 Drop des anciennes tables...")
-    db.drop_all()
-
-    print("🧱 Création des nouvelles tables...")
+    print("🧱 Création des tables si nécessaire...")
     db.create_all()
-
-    print("✅ Tables créées :", [t.name for t in db.metadata.sorted_tables])
+    print("✅ Tables présentes :", [t.name for t in db.metadata.sorted_tables])
