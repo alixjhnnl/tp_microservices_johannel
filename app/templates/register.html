@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Créer un compte</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="panel">
+    <h1>Créer un compte</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="alert {{ 'err' if cat=='err' else 'ok' }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="form">
+      <input class="input" type="text" name="nom" placeholder="Nom d'utilisateur" required>
+      <input class="input" type="password" name="mdp" placeholder="Mot de passe" required>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Créer mon compte</button>
+        <a class="btn" href="{{ url_for('index') }}">Retour</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

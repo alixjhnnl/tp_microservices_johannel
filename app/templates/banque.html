@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recapilatif</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+      
+<main class="panel">
+    <h1>Paiement</h1>
+    {% if bloque %}
+      <div class="alert err">Paiement bloqué (circuit breaker) après plusieurs échecs.</div>
+      <p class="small">Réessaie dans quelques minutes ou contacte le support.</p>
+      <a class="btn" href="/retour-articles?nom={{ nom }}">Retour</a>
+    {% else %}
+      <div class="alert ok">Paiement accepté ✅</div>
+      <p class="small">Merci pour ta commande, {{ nom }} !</p>
+      <a class="btn" href="/">Accueil</a>
+    {% endif %}
+  </main>
+  

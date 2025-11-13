@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Confirmation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+  <main class="panel">
+    <h1>Votre Panier, {{ nom }}</h1>
+  
+    {% if articles and articles|length > 0 %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Article</th>
+            <th>Qté</th>
+            <th>Prix unitaire</th>
+            <th>Total ligne</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in articles %}
+            <tr>
+              <td>{{ a.nom }}</td>
+              <td>{{ a.quantite }}</td>
+              <td>{{ "%.2f"|format(a.prix) }} €</td>
+              <td>{{ "%.2f"|format(a.total) }} €</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+  
+      <p class="lead" style="margin-top:10px">
+        Total panier : <strong>{{ "%.2f"|format(total) }} €</strong>
+      </p>
+  
+      <div class="actions">
+        <form action="{{ url_for('passer_commande') }}" method="POST">
+          <input type="hidden" name="nom" value="{{ nom }}">
+          <button class="btn btn-primary" type="submit">Passer commande</button>
+        </form>
+        <a class="btn" href="{{ url_for('retour_articles') }}?nom={{ nom }}">Continuer les achats</a>
+      </div>
+    {% else %}
+      <div class="alert err">Ton panier est vide.</div>
+      <a class="btn" href="{{ url_for('retour_articles') }}?nom={{ nom }}">Voir les articles</a>
+    {% endif %}
+  </main>

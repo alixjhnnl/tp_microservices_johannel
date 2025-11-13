@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boutique Sport</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="panel">
+    <h1>Bienvenue, {{ nom }} !</h1>
+    <p class="lead">Voici la liste de nos produits&nbsp;:</p>
+
+    <!-- IMPORTANT : envoie vers /api/article en POST -->
+    <form action="{{ url_for('afficher_panier') }}" method="POST" id="form-articles">
+      <div class="grid cols-3">
+        {% for article in articles %}
+        <label class="card">
+          <div class="media"><!-- image optionnelle --></div>
+          <div class="content">
+            <strong>{{ article.nom }}</strong>
+            <div class="small">{{ article.description or "Article de sport" }}</div>
+            <div class="price">{{ "%.2f"|format(article.prix) }} €</div>
+
+            <!-- Champ quantité : l’article est pris si quantité > 0 -->
+            <div class="actions">
+              <label class="small" for="qty-{{ loop.index }}">Quantité</label>
+              <input id="qty-{{ loop.index }}" class="input" type="number" min="0" step="1"
+                     name="qty[{{ article.nom }}]" value="0">
+            </div>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="actions" style="margin-top:14px">
+        <input type="hidden" name="nom" value="{{ nom }}">
+        <button class="btn btn-primary" type="submit">Voir le panier</button>
+        <a class="btn" href="/">Retour</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connexion</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+  <style>
+    /* ---- CENTRAGE DE LA CARTE ---- */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #0e1420 0%, #0b0f19 100%);
+      margin: 0;
+      padding: 0;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px; /* 👈 taille parfaite */
+      padding: 30px 35px;
+      background: rgba(20, 25, 35, 0.9);
+      border-radius: 18px;
+      box-shadow: 0 0 25px rgba(70, 90, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .login-card h1 {
+      margin-bottom: 22px;
+      font-size: 28px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <h1>Connexion</h1>
+
+    <form action="/api/utilisateurs" method="POST">
+
+      <div class="form-group">
+        <input class="input" type="text" name="nom" placeholder="Nom d'utilisateur">
+      </div>
+
+      <div class="form-group">
+        <input class="input" type="password" name="mdp" placeholder="Mot de passe">
+      </div>
+
+      <button class="btn btn-primary" type="submit" style="width:100%; margin-bottom:10px;">
+        Se connecter
+      </button>
+
+      <a href="/register" class="btn" style="width:100%; text-align:center;">
+        Créer un compte
+      </a>
+
+    </form>
+  </div>
+
+</body>
+</html>
