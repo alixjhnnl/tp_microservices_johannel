@@ -1,14 +1,15 @@
-/* ---------- Design system ---------- */
+/* ---------- DESIGN ---------- */
+
 :root{
-  --bg: #0f172a;        /* slate-900 */
-  --panel: #111827;     /* gray-900 */
-  --muted: #94a3b8;     /* slate-400 */
-  --text: #e5e7eb;      /* gray-200 */
-  --primary: #6366f1;   /* indigo-500 */
+  --bg: #0f172a;       
+  --panel: #111827;    
+  --muted: #94a3b8;     
+  --text: #e5e7eb;     
+  --primary: #6366f1;   
   --primary-strong: #4f46e5;
-  --accent: #22d3ee;    /* cyan-400 */
-  --success: #22c55e;   /* green-500 */
-  --danger: #ef4444;    /* red-500 */
+  --accent: #22d3ee;    
+  --success: #22c55e;   
+  --danger: #ef4444;    
   --radius: 14px;
   --shadow: 0 10px 30px rgba(0,0,0,.25);
 }
@@ -24,7 +25,8 @@ body{
   font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-/* ---------- Layout ---------- */
+/* ---------- LAYOUT ---------- */
+
 .header{
   position:sticky; top:0; z-index:10;
   backdrop-filter: saturate(180%) blur(8px);
@@ -47,12 +49,14 @@ body{
   padding:22px;
 }
 
-/* ---------- Typography ---------- */
+/* ---------- TYPO ---------- */
+
 h1{font-size:2rem; line-height:1.2; margin:.2em 0 .4em}
 h2{font-size:1.4rem; margin:1.2em 0 .5em; color:#cbd5e1}
 .lead{color:var(--muted)}
 
-/* ---------- Forms ---------- */
+/* ---------- FORMES ---------- */
+
 .form{display:grid; gap:12px}
 .input, select{
   width:100%; padding:12px 14px; background:#0b1220; color:var(--text);
@@ -61,7 +65,8 @@ h2{font-size:1.4rem; margin:1.2em 0 .5em; color:#cbd5e1}
 .input:focus, select:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(34,211,238,.2)}
 .actions{display:flex; gap:10px; flex-wrap:wrap}
 
-/* ---------- Buttons ---------- */
+/* ---------- BOUTTONS ---------- */
+
 .btn{
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   padding:12px 16px; border-radius:12px; border:1px solid transparent;
@@ -74,7 +79,8 @@ h2{font-size:1.4rem; margin:1.2em 0 .5em; color:#cbd5e1}
 .btn-ghost{background:transparent; border-color:rgba(148,163,184,.25)}
 .btn-danger{background:linear-gradient(180deg, #ef4444, #dc2626)}
 
-/* ---------- Cards & grid ---------- */
+/* ---------- GRILLES ---------- */
+
 .grid{display:grid; gap:16px}
 .grid.cols-3{grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))}
 .card{
@@ -85,17 +91,20 @@ h2{font-size:1.4rem; margin:1.2em 0 .5em; color:#cbd5e1}
 .card .content{padding:14px; display:flex; flex-direction:column; gap:8px}
 .price{color:#a7f3d0; font-weight:700}
 
-/* ---------- Tables (panier) ---------- */
+/* ---------- PANIER ---------- */
+
 .table{width:100%; border-collapse: collapse; overflow:hidden; border-radius:12px}
 .table th, .table td{padding:12px 14px; border-bottom:1px solid rgba(148,163,184,.15)}
 .table thead th{text-align:left; color:#cbd5e1; background: rgba(99,102,241,.08)}
 
-/* ---------- Alerts (breaker, etc.) ---------- */
+/* ---------- ALERTS ---------- */
+
 .alert{padding:12px 14px; border:1px solid; border-radius:12px; margin:10px 0}
 .alert.ok{border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.12); color:#bbf7d0}
 .alert.err{border-color:rgba(239,68,68,.5); background:rgba(239,68,68,.1); color:#fecaca}
 
-/* ---------- Little touches ---------- */
+/* ---------- TOUCHES ---------- */
+
 hr{border:none; height:1px; background:linear-gradient(90deg, transparent, rgba(148,163,184,.25), transparent); margin:18px 0}
 .small{font-size:.9rem; color:var(--muted)}
 footer{margin:40px 0; color:var(--muted); text-align:center}

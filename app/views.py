@@ -1,90 +1,23 @@
-import os, json, jwt
+import os
+import json
+
 from flask import render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
+
 from app.models import User
 from app import app, db
-from datetime import datetime, timezone, timedelta
+
+from datetime import datetime, timezone
 from functools import wraps
 
-# --- Config JWT ---
-JWT_SECRET = app.config['SECRET_KEY']       
-JWT_ALGO = "HS256"
-JWT_EXP_MINUTES = 1 
+# --------------------------------------------------------
+# LOG USER CONNEXIONS DANS UN FICHIER JSON
+# --------------------------------------------------------
 
-"""Création JWT pour utilisateur"""
- 
-def create_jwt(username: str) -> str:  
-    now = datetime.now(timezone.utc)
-    payload = {
-        "sub": username,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(minutes=JWT_EXP_MINUTES)).timestamp())
-    }
-    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
-    return token if isinstance(token, str) else token.decode("utf-8")
-
-def verify_jwt(token: str):
-    """Vérifie un JWT + cohérence avec la base. Renvoie le payload ou None."""
-    try:
-        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
-
-    username = payload.get("sub")
-    if not username:
-        return None
-
-    user = User.query.filter_by(username=username).first()
-    if user is None:
-        return None
-
-    # le token stocké ne correspond pas → invalide
-    if user.auth_token != token:
-        return None
-
-    # pas de date d'expiration en base → invalide
-    if not user.token_expires_at:
-        return None
-
-    # Normalisation : on rend la date "aware" si elle est naive
-    expires = user.token_expires_at
-    if expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
-
-    # Comparaison avec l'heure actuelle (aware elle aussi)
-    if expires < datetime.now(timezone.utc):
-        return None
-
-    return payload
-
-    
-# --- transport token ---
-def jwt_required(f):
-    """vérifie qu'un JWT valide est présent avant d'accéder à la route."""
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        token = session.get("jwt_token")
-        if not token:
-            flash("Tu dois être connecté pour accéder à cette ressource.", "err")
-            return redirect(url_for("index"))
-
-        payload = verify_jwt(token)
-        if payload is None:
-            flash("Session expirée ou invalide. Reconnecte-toi.", "err")
-            # on nettoie le token invalide
-            session.pop("jwt_token", None)
-            return redirect(url_for("index"))
-
-        # on peut récupérer le username depuis payload["sub"] si besoin
-        return f(*args, **kwargs)
-    return wrapper
-
-# --- LOG user ---
 def log_user_login(user_id: str):
     data_dir = os.path.join(app.root_path, "data")
     os.makedirs(data_dir, exist_ok=True)
+    
     log_path = os.path.join(data_dir, "logins.json")
 
     try:
@@ -102,38 +35,81 @@ def log_user_login(user_id: str):
 
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump(entries, f, ensure_ascii=False, indent=2)
-        
-# ---------- routes ----------
+
+# --------------------------------------------------------
+# DÉCORATEUR "login_required" 
+# --------------------------------------------------------
+
+def login_required(f):
+    """
+    Décorateur : protège une route. Si l'utilisateur n'est pas connecté 
+    (pas de user_id dans la session), on le renvoie à la page de login.
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Tu dois être connecté pour accéder à cette page.", "err")
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+
+    return wrapper
+
+# --------------------------------------------------------
+#  ROUTE PAGE D'ACCUEIL / LOGIN
+# --------------------------------------------------------
+
 @app.route("/")
-def index():
+def index(): 
     return render_template("index.html")
 
-# Inscription (optionnelle)
+# --------------------------------------------------------
+#  ROUTE D'INSCRIPTION /register
+# --------------------------------------------------------
+"""Permet de créer un compte : 
+    - GET : affiche le formulaire d'inscription
+    - POST : traite le formulaire, crée un utilisateur en base"""
+        
 @app.route('/register', methods=['GET', 'POST'])
-def register():
+def register(): 
+  
     if request.method == 'POST':
         username = request.form.get('nom')
         password = request.form.get('mdp')
-        if not username or not password:
-            flash("Remplis nom et mot de passe", "err")
+        
+        if not username or not password: # Vérifie remplissage des champs
+            flash("Erreur remplissage", "err")
             return redirect(url_for('register'))
 
-        if User.query.filter_by(username=username).first():
+        if User.query.filter_by(username=username).first(): # Vérifie si username déjà pris
             flash("Nom d'utilisateur déjà pris", "err")
             return redirect(url_for('register'))
 
-        hash_pw = generate_password_hash(password)
+        hash_pw = generate_password_hash(password) # Hachage du mot de passe pour ne jamais le stocker en clair
+        
         user = User(username=username, password_hash=hash_pw)
         db.session.add(user)
         db.session.commit()
+        
         flash("Compte créé — tu peux te connecter.", "ok")
         return redirect(url_for('index'))
 
-    return render_template('register.html')  # crée ce template si tu veux l’inscription via UI
 
-# Connexion stricte (pas d’auto-création)
+    return render_template('register.html')  # Si GET : on affiche la page register.html
+
+# --------------------------------------------------------
+#  ROUTE DE CONNEXION /api/utilisateurs
+# --------------------------------------------------------
+
 @app.route("/api/utilisateurs", methods=["POST"])
 def ajouter_utilisateur():
+    """
+    PUBLIQUE
+    Traite le formulaire de connexion.
+    - Vérifie que l'utilisateur existe
+    - Vérifie le mot de passe (hash)
+    - Stocke les infos dans la session Flask
+    - Redirige vers la page des articles
+    """
     username = request.form.get("nom")
     password = request.form.get("mdp")
 
@@ -141,41 +117,25 @@ def ajouter_utilisateur():
         flash("Nom et mot de passe requis", "err")
         return redirect(url_for("index"))
 
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(username=username).first() # On cherche l'utilisateur dans la base
     if user is None:
-        flash("Utilisateur inconnu. Crée d'abord un compte.", "err")
+        flash("User not found. Crée un compte.", "err")
         return redirect(url_for("index"))
 
-    if not check_password_hash(user.password_hash, password):
+    if not check_password_hash(user.password_hash, password): # Vérification du mot de passe (comparaison hash)
         flash("Mot de passe incorrect", "err")
         return redirect(url_for("index"))
 
-    # OK → page articles
-    log_user_login(username)
+    # Si tout est OK :
+    # - on loggue la connexion dans logins.json
+    # - on met les infos dans la session
+    log_user_login(username) 
     
-    # Auth Service : création du JWT et stockage dans la session
-    now = datetime.now(timezone.utc)
-    payload = {
-        "sub": username,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(minutes=30)).timestamp())
-    }
-    token = jwt.encode(payload, app.config["SECRET_KEY"], algorithm="HS256")
-    if not isinstance(token, str):
-        token = token.decode("utf-8")
-
-    # ✅ Sauvegarde du token en base
-    user.auth_token = token
-    user.token_expires_at = now + timedelta(minutes=30)
-    db.session.commit()
-
-    # ✅ on garde aussi le token en session
-    session["jwt_token"] = token
-
-    # panier vide au début
-    session["panier"] = {}
+    session["user_id"] = user.id        # identifiant unique en base
+    session["username"] = user.username # pour l'affichage
+    session["panier"] = {}              # panier vide au début de la session
     
-    articles = [
+    articles = [   # Liste fixe d'articles (catalogue)
         {"nom": "Ballon de football", "prix": 25.90},
         {"nom": "Chaussures de running", "prix": 79.99},
         {"nom": "Raquette de tennis", "prix": 89.50},
@@ -187,31 +147,22 @@ def ajouter_utilisateur():
         {"nom": "Gourde inox 750 ml", "prix": 14.50},
         {"nom": "Short de sport", "prix": 22.90},
     ]
+    # On envoie l'utilisateur sur la page des articles
     return render_template("article.html", nom=username, articles=articles)
 
-# Panier
+# --------------------------------------------------------
+#  ROUTE PANIER /api/article
+# --------------------------------------------------------
 @app.route("/api/article", methods=["GET", "POST"])
-@jwt_required
+@login_required
 def afficher_panier():
-    if request.method == "GET":
-        # si quelqu’un tape l’URL directement, on renvoie la liste d’articles
-        nom = request.args.get("nom", "invité")
-        articles = [
-            {"nom": "Ballon de football", "prix": 25.90},
-            {"nom": "Chaussures de running", "prix": 79.99},
-            {"nom": "Raquette de tennis", "prix": 89.50},
-            {"nom": "Gants de boxe", "prix": 45.00},
-            {"nom": "Tapis de yoga", "prix": 19.90},
-            {"nom": "Casque de vélo", "prix": 39.90},
-            {"nom": "Ballon de basket", "prix": 29.90},
-            {"nom": "Haltères 5 kg", "prix": 34.90},
-            {"nom": "Gourde inox 750 ml", "prix": 14.50},
-            {"nom": "Short de sport", "prix": 22.90},
-        ]
-        return render_template("article.html", nom=nom, articles=articles)
-
-    nom = request.form.get("nom")
-
+    """
+    PRIVEE
+    - GET : si quelqu'un tape l'URL directement, on réaffiche la liste d'articles
+    - POST : on lit les quantités du formulaire et on construit le panier
+    """
+    nom = session.get("username", "invité") # Nom de l'utilisateur pour affichage : on le récupère depuis la session
+    
     articles_all = [
         {"nom": "Ballon de football", "prix": 25.90},
         {"nom": "Chaussures de running", "prix": 79.99},
@@ -225,13 +176,18 @@ def afficher_panier():
         {"nom": "Short de sport", "prix": 22.90},
     ]
     ref = {a["nom"]: a for a in articles_all}
+        
+    if request.method == "GET":
+        # GET : on renvoie juste la page des articles
+        return render_template("article.html", nom=nom, articles=articles_all)
 
-    panier = []
+    panier = [] # POST : on lit les quantités envoyées par le formulaire article.html
     total = 0.0
-    # Récupérer toutes les clés qty[...]
-    for key, val in request.form.items():
+   
+    for key, val in request.form.items(): # Les input du formulaire ont une forme : name="qty[Nom de l'article]"
         if key.startswith("qty[") and key.endswith("]"):
-            nom_article = key[4:-1]              # ce qu'il y a entre les crochets
+            nom_article = key[4:-1]  # récupère ce qu'il y a entre les crochets
+            
             try:
                 qte = int(val or 0)
             except ValueError:
@@ -239,39 +195,57 @@ def afficher_panier():
 
             if qte > 0 and nom_article in ref:
                 prix = ref[nom_article]["prix"]
+                ligne_total = round(prix * qte, 2)
+                
                 ligne = {
                     "nom": nom_article,
                     "prix": prix,
                     "quantite": qte,
-                    "total": round(prix * qte, 2)
+                    "total": ligne_total,
                 }
                 panier.append(ligne)
                 total += ligne["total"]
                 
     return render_template("confirmation.html", nom=nom, articles=panier, total=round(total, 2))
 
-# Breaker
+# --------------------------------------------------------
+#  BREAKER /api/commande
+# --------------------------------------------------------
+
 breaker_counter = 0
 BREAKER_LIMIT = 3
 
 @app.route("/api/commande", methods=["POST"])
-@jwt_required
-def passer_commande():
+@login_required
+def passer_commande(): 
+    """
+    Simule un service de paiement avec breaker :
+    - après un certain nombre d'appels, on considère que le service est "bloqué"
+    """
     global breaker_counter
-    nom = request.form.get("nom")
+    nom = session.get("username", "invité")
+    
     breaker_counter += 1
     bloque = breaker_counter >= BREAKER_LIMIT
+    
     if bloque:
-        breaker_counter = 0
+        breaker_counter = 0 # On "reset" le breaker après déclenchement
+        
     return render_template("banque.html", nom=nom, bloque=bloque)
 
+# --------------------------------------------------------
+#  RETOUR AUX ARTICLES /retour-articles
+# --------------------------------------------------------
+
 @app.route("/retour-articles")
-@jwt_required
+@login_required
 def retour_articles():
-    nom = request.args.get("nom")
-    if not nom:
-        return redirect(url_for("index"))
-    return render_template("article.html", nom=nom, articles=[
+    """
+    Permet de revenir à la page des articles depuis la confirmation.
+    """
+    nom = session.get("username", "invité")
+    
+    articles = [
         {"nom": "Ballon de football", "prix": 25.90},
         {"nom": "Chaussures de running", "prix": 79.99},
         {"nom": "Raquette de tennis", "prix": 89.50},
@@ -282,4 +256,6 @@ def retour_articles():
         {"nom": "Haltères 5 kg", "prix": 34.90},
         {"nom": "Gourde inox 750 ml", "prix": 14.50},
         {"nom": "Short de sport", "prix": 22.90},
-    ])
+    ]
+
+    return render_template("article.html", nom=nom, articles=articles)

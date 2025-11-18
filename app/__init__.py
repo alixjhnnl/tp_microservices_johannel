@@ -1,23 +1,37 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import os
+from flask_oauthlib.provider import OAuth2Provider
 
+# --------------------------------------------------------
+# CREATION DE L'APP FLASK
+# --------------------------------------------------------
 app = Flask(__name__)
+
+# --------------------------------------------------------
+# CLE SECRETE POUR SESSIONS / COOKIES / OAuth2
+# --------------------------------------------------------
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
 
+# --------------------------------------------------------
+# CONFIG DE LA BASE SQLITE
+# --------------------------------------------------------
 db_path = os.path.join(os.path.dirname(__file__), 'db.sqlite')
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# --------------------------------------------------------
+# CONFIG OAUTH2 (durée de vie Tokens)
+# --------------------------------------------------------
+app.config['OAUTH2_PROVIDER_TOKEN_EXPIRES_IN'] = 3600  # 1 heure
+
+# --------------------------------------------------------
+# EXTENSIONS
+# --------------------------------------------------------
 db = SQLAlchemy(app)
+oauth = OAuth2Provider(app)
 
-# 1) Importer les modèles pour que SQLAlchemy connaisse User
-from app import models  # <-- IMPORTANT : models avant create_all
-
-# 2) Créer les tables au démarrage si elles n’existent pas
-with app.app_context():
-    db.create_all()
-    print("✅ DB prête :", app.config['SQLALCHEMY_DATABASE_URI'])
-
-# 3) Charger les routes
-from app import views
+# --------------------------------------------------------
+# IMPORT DES MODELES ET DES VUES POUR EVITER IMPORTS CIRCULAIRES # noqa: E402,F401
+# --------------------------------------------------------
+from app import models, views  
