@@ -131,8 +131,8 @@ def ajouter_utilisateur():
     # - on met les infos dans la session
     log_user_login(username) 
     
-    session["user_id"] = user.id        # identifiant unique en base
-    session["username"] = user.username # pour l'affichage
+    session["user_id"] = user.id        
+    session["username"] = user.username # affichage
     session["panier"] = {}              # panier vide au début de la session
     
     articles = [   # Liste fixe d'articles (catalogue)
@@ -176,14 +176,13 @@ def afficher_panier():
         {"nom": "Short de sport", "prix": 22.90},
     ]
     ref = {a["nom"]: a for a in articles_all}
-        
+    
+    panier_session = session.get("panier", {})
+    
+    # --------- liste articles ---------
     if request.method == "GET":
-        # GET : on renvoie juste la page des articles
         return render_template("article.html", nom=nom, articles=articles_all)
 
-    panier = [] # POST : on lit les quantités envoyées par le formulaire article.html
-    total = 0.0
-   
     for key, val in request.form.items(): # Les input du formulaire ont une forme : name="qty[Nom de l'article]"
         if key.startswith("qty[") and key.endswith("]"):
             nom_article = key[4:-1]  # récupère ce qu'il y a entre les crochets
@@ -193,21 +192,32 @@ def afficher_panier():
             except ValueError:
                 qte = 0
 
-            if qte > 0 and nom_article in ref:
-                prix = ref[nom_article]["prix"]
-                ligne_total = round(prix * qte, 2)
-                
-                ligne = {
-                    "nom": nom_article,
-                    "prix": prix,
-                    "quantite": qte,
-                    "total": ligne_total,
-                }
-                panier.append(ligne)
-                total += ligne["total"]
-                
-    return render_template("confirmation.html", nom=nom, articles=panier, total=round(total, 2))
+            # Mise à jour du panier
+            if qte > 0:
+                panier_session[nom_article] = qte
+            
+            
+    session["panier"] = panier_session
+    
+    # on lit le formulaire et on met à jour le panier
+    panier = [] 
+    total = 0.0
+    
+    # On reconstruit la liste détaillée pour la confirmation
+    for nom_article, qte in panier_session.items():
+        if nom_article in ref:
+            prix = ref[nom_article]["prix"]
+            ligne_total = round(prix * qte, 2)
+            panier.append({
+                "nom": nom_article,
+                "prix": prix,
+                "quantite": qte,
+                "total": ligne_total,
+            })
+            total += ligne_total
 
+    return render_template("confirmation.html", nom=nom, articles=panier, total=round(total, 2))
+    
 # --------------------------------------------------------
 #  BREAKER /api/commande
 # --------------------------------------------------------
@@ -257,5 +267,7 @@ def retour_articles():
         {"nom": "Gourde inox 750 ml", "prix": 14.50},
         {"nom": "Short de sport", "prix": 22.90},
     ]
+    
+    quantites = session.get("panier", {})
 
-    return render_template("article.html", nom=nom, articles=articles)
+    return render_template("article.html", nom=nom, articles=articles, quantites=quantites)
